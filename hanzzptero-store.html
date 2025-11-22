@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTERODACTYL_BLACK_MARKET</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- SYSTEM CORE STYLE --- */
+        :root {
+            --primary: #0f0;
+            --secondary: #003300;
+            --alert: #ff0000;
+            --bg: #000;
+            --glass: rgba(0, 10, 0, 0.9);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--primary);
+            font-family: 'VT323', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* MATRIX CANVAS */
+        #matrix { position: absolute; top: 0; left: 0; z-index: 0; opacity: 0.3; }
+
+        /* SCANLINE EFFECT */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+            bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* TERMINAL WINDOW */
+        .terminal {
+            position: relative; z-index: 10;
+            width: 95%; max-width: 1000px; height: 90vh;
+            background: var(--glass);
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 20px var(--primary);
+            display: flex; flex-direction: column;
+            animation: boot 0.5s ease-out;
+        }
+
+        /* HEADER */
+        .header {
+            background: var(--primary); color: var(--bg);
+            padding: 5px 10px; display: flex; justify-content: space-between;
+            font-weight: bold; text-transform: uppercase;
+            font-size: 1.2rem; border-bottom: 2px solid var(--secondary);
+        }
+
+        /* MAIN LAYOUT */
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px; border-right: 1px solid var(--primary);
+            padding: 15px; display: flex; flex-direction: column;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .profile-pic {
+            width: 80px; height: 80px; margin: 0 auto 15px;
+            border: 2px dashed var(--primary); border-radius: 50%;
+            background: url('https://i.pinimg.com/736x/8b/25/e2/8b25e25054a0084925a16607c0f4d672.jpg') center/cover;
+            position: relative;
+        }
+        .profile-pic::after {
+            content: ''; position: absolute; inset: -5px;
+            border: 1px solid var(--primary); border-radius: 50%;
+            animation: spin 10s linear infinite;
+        }
+
+        .nav-btn {
+            background: transparent; color: var(--primary);
+            border: 1px solid var(--secondary); margin-bottom: 8px;
+            padding: 10px; text-align: left; cursor: pointer;
+            font-family: inherit; font-size: 1.1rem; transition: 0.2s;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--primary); color: var(--bg);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .sys-log {
+            margin-top: auto; font-size: 0.8rem; color: #00aa00;
+            height: 100px; overflow-y: auto; border-top: 1px dashed var(--primary);
+            padding-top: 5px;
+        }
+
+        /* CONTENT AREA */
+        .content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+
+        /* SECTIONS */
+        .section { display: none; animation: glitch 0.3s; }
+        .section.active { display: block; }
+
+        /* PRODUCT GRID */
+        .grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        .card {
+            border: 1px solid var(--primary); padding: 10px;
+            text-align: center; position: relative;
+            transition: 0.3s; background: rgba(0,20,0,0.4);
+        }
+        .card:hover { transform: scale(1.02); box-shadow: 0 0 15px var(--primary); }
+        .card img { width: 60px; filter: drop-shadow(0 0 5px var(--primary)); margin-bottom: 10px; }
+        .card h3 { font-size: 1rem; margin-bottom: 5px; }
+        .card .price { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .buy-btn {
+            width: 100%; margin-top: 10px; background: transparent;
+            border: 1px solid var(--primary); color: var(--primary);
+            cursor: pointer; font-family: inherit;
+        }
+        .buy-btn:hover { background: var(--primary); color: #000; }
+
+        /* CART & PAYMENT UI */
+        .cart-row {
+            display: flex; justify-content: space-between; border-bottom: 1px dashed #005500;
+            padding: 8px 0;
+        }
+        .total-display {
+            font-size: 1.5rem; text-align: right; margin-top: 20px;
+            border-top: 2px solid var(--primary); padding-top: 10px;
+        }
+
+        .payment-methods { display: flex; gap: 10px; margin-bottom: 20px; }
+        .pay-opt {
+            flex: 1; border: 1px solid var(--primary); padding: 10px;
+            text-align: center; cursor: pointer; opacity: 0.5;
+        }
+        .pay-opt.selected { opacity: 1; background: rgba(0,255,0,0.2); border: 2px solid var(--primary); }
+
+        .qr-box {
+            width: 200px; height: 200px; margin: 0 auto;
+            border: 2px solid var(--primary); padding: 5px; position: relative;
+        }
+        .qr-box img { width: 100%; height: 100%; image-rendering: pixelated; }
+        .scan-line {
+            width: 100%; height: 2px; background: var(--alert);
+            position: absolute; top: 0; left: 0;
+            box-shadow: 0 0 10px var(--alert);
+            animation: scan 2s infinite alternate;
+        }
+
+        /* Number Display Box */
+        .number-box {
+            border: 2px dashed var(--primary);
+            padding: 20px;
+            text-align: center;
+            background: rgba(0,50,0,0.5);
+            display: none; /* Hidden by default */
+            animation: glitch 0.2s;
+        }
+        .number-text {
+            font-size: 2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin: 10px 0;
+            color: #fff;
+        }
+        .copy-btn {
+            background: var(--primary); color: #000; border: none;
+            padding: 5px 15px; cursor: pointer; font-family: inherit; font-weight: bold;
+        }
+        .copy-btn:active { transform: scale(0.95); }
+
+
+        .checkout-btn {
+            width: 100%; background: var(--primary); color: #000;
+            font-size: 1.5rem; padding: 10px; border: none;
+            margin-top: 20px; cursor: pointer; font-weight: bold;
+            font-family: inherit; animation: blink 1.5s infinite;
+        }
+
+        /* MUSIC PLAYER */
+        .music-player {
+            border-top: 1px solid var(--primary); padding: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg); font-size: 0.9rem;
+        }
+
+        /* ANIMATIONS */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes boot { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        @keyframes glitch { 0% { transform: translate(2px,2px); } 20% { transform: translate(-2px,-2px); } 100% { transform: translate(0); } }
+
+        /* RESPONSIVE */
+        @media(max-width: 768px) {
+            .main-layout { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--primary); }
+            .profile-pic, .sys-log { display: none; }
+            .nav-btn { flex: 1; text-align: center; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix"></canvas>
+
+    <div class="terminal">
+        <div class="header">
+            <span>HANZZPTERO-STORE:~#</span>
+            <span id="clock">00:00:00</span>
+        </div>
+
+        <div class="main-layout">
+            <div class="sidebar">
+                <div class="profile-pic"></div>
+                <div style="text-align:center; margin-bottom:15px; border-bottom:1px dashed #0f0; padding-bottom:5px;">
+                    STATUS: <span style="color:#0f0">ONLINE</span>
+                </div>
+
+                <button class="nav-btn active" onclick="nav('store')">> PANEL LIST</button>
+                <button class="nav-btn" onclick="nav('cart')">> CACHE [<span id="cart-count">0</span>]</button>
+                <button class="nav-btn" onclick="nav('payment')">> UPLINK (PAY)</button>
+                
+                <div class="sys-log" id="log-box">
+                    > SYSTEM BOOTED...<br>
+                    > CONNECTED TO DB...<br>
+                </div>
+            </div>
+
+            <div class="content">
+                
+                <div id="store" class="section active">
+                    <h2 style="margin-bottom: 15px; border-bottom: 1px solid #0f0;">AVAILABLE_NODES</h2>
+                    <div class="grid" id="product-grid"></div>
+                </div>
+
+                <div id="cart" class="section">
+                    <h2 style="margin-bottom: 15px; border-bottom: 1px solid #0f0;">MEMORY_CACHE (CART)</h2>
+                    <div id="cart-list">
+                        <p style="color:#555">>> NO DATA IN MEMORY...</p>
+                    </div>
+                    <div class="total-display">TOTAL: Rp <span id="cart-total">0</span></div>
+                    <button class="buy-btn" style="margin-top:20px; font-size:1.2rem;" onclick="nav('payment')">PROCEED TO UPLINK >></button>
+                </div>
+
+                <div id="payment" class="section">
+                    <h2 style="margin-bottom: 15px; border-bottom: 1px solid #0f0;">SECURE_GATEWAY</h2>
+                    
+                    <p style="margin-bottom:10px;">SELECT PROTOCOL:</p>
+                    <div class="payment-methods">
+                        <div class="pay-opt selected" onclick="selectPay('QRIS')">QRIS (ALL)</div>
+                        <div class="pay-opt" onclick="selectPay('SHOPEEPAY')">SHOPEEPAY</div>
+                    </div>
+
+                    <div id="qris-display">
+                        <div class="qr-box">
+                            <div class="scan-line"></div>
+                            <img src="https://files.catbox.moe/lwcrnq.jpg" alt="QR">
+                        </div>
+                        <p style="text-align:center; margin-top:5px; color:#888;">SCAN QR TO PAY</p>
+                    </div>
+
+                    <div id="number-display" class="number-box">
+                        <p>SHOPEEPAY DESTINATION:</p>
+                        <div class="number-text" id="wallet-number">6285759557282</div>
+                        <button class="copy-btn" onclick="copyNumber()">[ COPY NUMBER ]</button>
+                        <p style="margin-top:10px; font-size:0.8rem; color:#aaa;">*Transfer sesuai total nominal</p>
+                    </div>
+
+                    <div style="text-align:center; margin-top:15px;">
+                        <p>TRANSACTION ID: <span id="trx-id" style="color:#fff">GENERATING...</span></p>
+                        <p style="margin-top:5px;">TOTAL DUE: Rp <span id="pay-amount">0</span></p>
+                    </div>
+
+                    <button class="checkout-btn" onclick="checkoutWA()">[ EXECUTE ORDER ]</button>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="music-player">
+            <div id="now-playing">♫ HACKER_VIBES.mp3</div>
+            <button onclick="toggleMusic()" style="background:none; border:none; color:#0f0; cursor:pointer;">[ PLAY/PAUSE ]</button>
+        </div>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="https://files.catbox.moe/h81zc4.mp4" type="audio/mp3">
+    </audio>
+
+    <script>
+        /* --- DATABASE PRODUK PTERODACTYL --- */
+        const products = [
+            { id: 1, name: "RAM 1GB 
